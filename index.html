@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SAMUEL AI Voice Assistant</title>
+
+<style>
+
+body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background:#0f172a;
+  font-family:Arial;
+  color:white;
+}
+
+.container{
+  text-align:center;
+}
+
+.orb{
+  width:180px;
+  height:180px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#3b82f6,#06b6d4);
+  margin:auto;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:70px;
+  cursor:pointer;
+  transition:0.3s;
+  box-shadow:0 0 40px rgba(59,130,246,0.5);
+}
+
+.orb:hover{
+  transform:scale(1.05);
+}
+
+.orb.listening{
+  animation:pulse 1s infinite;
+}
+
+@keyframes pulse{
+  0%{
+    transform:scale(1);
+    box-shadow:0 0 20px #3b82f6;
+  }
+
+  50%{
+    transform:scale(1.1);
+    box-shadow:0 0 60px #06b6d4;
+  }
+
+  100%{
+    transform:scale(1);
+    box-shadow:0 0 20px #3b82f6;
+  }
+}
+
+.status{
+  margin-top:30px;
+  font-size:20px;
+  opacity:0.9;
+}
+
+.user-text{
+  margin-top:20px;
+  font-size:18px;
+  color:#cbd5e1;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+<select id="langMode">
+  <option value="auto">Auto Detect</option>
+  <option value="en-twi">English → Twi</option>
+  <option value="twi-en">Twi → English</option>
+</select>
+  <div
+    class="orb"
+    id="orb"
+    onclick="startListening()"
+  >
+    🎤
+  </div>
+
+  <div class="status" id="status">
+    Click to Speak
+  </div>
+
+  <div class="user-text" id="userText"></div>
+
+</div>
+
+<script>
+
+// LOAD VOICES
+window.speechSynthesis.onvoiceschanged = () => {
+  speechSynthesis.getVoices();
+};
+
+let recognition;
+
+// 🎤 START LISTENING
+function startListening(){
+
+  speechSynthesis.cancel();
+
+  const orb =
+    document.getElementById("orb");
+
+  const status =
+    document.getElementById("status");
+
+  orb.classList.add("listening");
+
+  status.innerText =
+    "Listening...";
+
+  recognition =
+    new (
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition
+    )();
+
+ const mode = document.getElementById("langMode").value;
+
+if (mode === "en-twi") {
+  recognition.lang = "en-US";
+} 
+else if (mode === "twi-en") {
+  recognition.lang = "ak-GH"; // Twi (Akan Ghana)
+} 
+else {
+  recognition.lang = "en-US"; // fallback auto
+}
+
+  recognition.interimResults = false;
+
+  recognition.start();
+
+  // USER FINISHED TALKING
+  recognition.onresult = async (event) => {
+
+    const text =
+      event.results[0][0].transcript;
+
+    document.getElementById(
+      "userText"
+    ).innerText = text;
+
+    orb.classList.remove(
+      "listening"
+    );
+
+    status.innerText =
+      "Thinking...";
+
+    await askAI(text);
+  };
+
+  recognition.onerror = () => {
+
+    orb.classList.remove(
+      "listening"
+    );
+
+    status.innerText =
+      "Mic Error";
+  };
+}
+
+// 🧠 ASK AI
+async function askAI(message){
+
+  try{
+
+    const res =
+      await fetch(
+        "http://localhost:3000/chat",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+
+          body:JSON.stringify({
+            message
+          })
+        }
+      );
+
+    const data =
+      await res.json();
+
+    document.getElementById(
+      "status"
+    ).innerText =
+      "Speaking...";
+
+    speakBot(data.reply);
+
+  }catch(err){
+
+    document.getElementById(
+      "status"
+    ).innerText =
+      "Connection Error";
+  }
+}
+
+function speakBot(text){
+
+  speechSynthesis.cancel();
+
+  const isTwi = /[ɛɔŋ]/.test(text);
+
+  const utter =
+    new SpeechSynthesisUtterance(text);
+
+  utter.rate = 0.85;
+  utter.pitch = 0.9;
+
+  // If Twi → slower clearer voice
+  if(isTwi){
+    utter.lang = "en-GB";
+  } else {
+    utter.lang = "en-US";
+  }
+
+  const voices = speechSynthesis.getVoices();
+  utter.voice = voices.find(v =>
+    v.lang.includes("en")
+  ) || voices[0];
+
+  speechSynthesis.speak(utter);
+}
+</script>
+
+</body>
+</html>
