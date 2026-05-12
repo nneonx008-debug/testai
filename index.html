@@ -211,12 +211,9 @@ async function askAI(message){
     speakBot(data.reply);
 
   }catch(err){
-
-    document.getElementById(
-      "status"
-    ).innerText =
-      "Connection Error";
-  }
+  console.log("FULL ERROR:", err);
+  status.innerText = err.message || "Connection Error";
+}
 }
 
 function speakBot(text){
