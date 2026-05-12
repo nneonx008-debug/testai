@@ -5,7 +5,7 @@ import path from "path";
 import axios from "axios";
 
 dotenv.config();
-
+const PORT = process.env.PORT || 3000
 const app = express();
 
 app.use(cors());
@@ -75,6 +75,6 @@ Rules:
 });
 
 // START SERVER
-app.listen(3000, () => {
+app.listen(PORT, () => {
   console.log("Server running on http://localhost:3000");
 });
